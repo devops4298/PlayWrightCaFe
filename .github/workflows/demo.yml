@@ -27,10 +27,11 @@ jobs:
         run: npm run build
       - name: uploadfile
         uses: actions/upload-artifact@v3
-        with: testreport
-        path: |
-          dist
-          package.json
+        with: 
+          name: testreport
+          path: |
+            dist
+            package.json
   deploy:
     needs: build
     runs-on: ubuntu-latest
