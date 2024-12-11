@@ -1,0 +1,56 @@
+name: Publish and Release
+
+on:
+  push:
+    tags:
+      - 'v*' # Trigger workflow on version tags (e.g., v1.0.0)
+
+jobs:
+  publish-and-release:
+    runs-on: ubuntu-latest
+
+    steps:
+      # Step 1: Checkout the code
+      - name: Checkout Code
+        uses: actions/checkout@v3
+
+      # Step 2: Set up Node.js
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: 16
+          registry-url: https://npm.pkg.github.com/
+
+      # Step 3: Authenticate to GitHub Packages
+      - name: Authenticate with GitHub Packages
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # Step 4: Publish the NPM package
+      - name: Publish NPM Package
+        run: |
+          npm install
+          npm publish --registry https://npm.pkg.github.com
+
+      # Step 5: Create GitHub Release
+      - name: Create GitHub Release
+        uses: actions/create-release@v1
+        with:
+          tag_name: ${{ github.ref_name }} # The tag triggering the workflow (e.g., v1.0.0)
+          release_name: Release ${{ github.ref_name }}
+          body: |
+            **Changes in this release:**
+            - Published NPM package `@cna/playwright-e2e-cna@${{ github.ref_name }}`
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # Step 6: Optional - Upload Assets (e.g., compiled files, tgz)
+      - name: Upload Release Assets
+        uses: actions/upload-release-asset@v1
+        with:
+          upload_url: ${{ steps.create-release.outputs.upload_url }}
+          asset_path: "./playwright-e2e-cna-*.tgz"
+          asset_name: "playwright-e2e-cna-${{ github.ref_name }}.tgz"
+          asset_content_type: application/gzip
