@@ -25,14 +25,15 @@ jobs:
       - name: Authenticate with GitHub Packages
         env:
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: echo "Authenticated with GitHub Packages"
 
-      # Step 4: Publish the NPM package
+      # Step 4: Install dependencies and publish the package
       - name: Publish NPM Package
         run: |
           npm install
           npm publish --registry https://npm.pkg.github.com
 
-      # Step 5: Create GitHub Release
+      # Step 5: Create a GitHub Release
       - name: Create GitHub Release
         uses: actions/create-release@v1
         with:
@@ -46,7 +47,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      # Step 6: Optional - Upload Assets (e.g., compiled files, tgz)
+      # Step 6: Upload additional assets (optional)
       - name: Upload Release Assets
         uses: actions/upload-release-asset@v1
         with:
