@@ -3,38 +3,65 @@ on: push
 
 jobs:
   build:
-     runs-on: ubuntu-latest
-       
-     steps:
-       - name: Checkout
-         uses: actions/checkout@v3
-         
-       - name: Setup JFrog CLI
-         uses: jfrog/setup-jfrog-cli@v4
-         env:  
-           JF_URL: ${{ vars.JF_URL }}
-           JF_ACCESS_TOKEN: ${{ secrets.JF_ACCESS_TOKEN }}
-           
-       - name: Setup Node npm
-         uses: actions/setup-node@v3
-           
-       - name: Set CLI Config
-         run: jf npm-config --global=true --repo-resolve=auto-npm --repo-deploy=auto-npm
-           
-       - name: Install Deps
-         run: jf npm install
-           
-       - name: Run tests
-         run: npm test
-         
-       - name: Publish
-         run: jf npm publish
-         
-       - name: Publish Build info With JFrog CLI
-         run: |
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Setup JFrog CLI
+        uses: jfrog/setup-jfrog-cli@v4
+        env:
+          JF_URL: ${{ vars.JF_URL }}
+          JF_ACCESS_TOKEN: ${{ secrets.JF_ACCESS_TOKEN }}
+
+      - name: Setup Node npm
+        uses: actions/setup-node@v3
+
+      - name: Set CLI Config
+        run: jf npm-config --global=true --repo-resolve=auto-npm --repo-deploy=auto-npm
+
+      - name: Install Deps
+        run: jf npm install
+
+      - name: Run tests
+        run: npm test
+
+      - name: Publish
+        run: jf npm publish
+
+      - name: Publish Build info With JFrog CLI
+        run: |
           # Collect environment variables for the build
           jf rt build-collect-env
           # Collect VCS details from git and add them to the build
           jf rt build-add-git
           # Publish build info
           jf rt build-publish
+
+      - name: Download JFrog Package
+        run: |
+          # Download the package from JFrog
+          jf rt download npm/02-basic-example/-/02-basic-example-1.0.0.tgz ./jfrog-package.tgz
+
+      - name: Create GitHub Release
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ github.sha }}
+          release_name: "Release ${{ github.sha }}"
+          body: "Release notes for commit ${{ github.sha }}"
+          draft: false
+          prerelease: false
+
+      - name: Upload Release Asset
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./jfrog-package.tgz
+          asset_name: jfrog-package.tgz
+          asset_content_type: application/gzip
