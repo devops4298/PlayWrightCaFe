@@ -1,85 +1,75 @@
-# 0) INSTALLS (uncomment in a notebook/terminal)
-# %pip install -qU langchain langchain-core langchain-community langgraph \
-#                 langchain-openai beautifulsoup4
+🧰 Frontend Frameworks & Libraries
+1. React – A JavaScript library for building user interfaces.
+    * Website: https://react.dev/ WIRED+7solidjs.com+7React+7
+2. Vue.js – An approachable, performant, and versatile framework for building web user interfaces.
+    * Website: https://vuejs.org/ Vue.js
+3. Angular – A platform and framework for building single-page client applications using HTML and TypeScript.
+    * Website: https://angular.dev/ angular.io
+4. Svelte – A compiler that generates minimal and highly optimized JavaScript code for building user interfaces.
+    * Website: https://svelte.dev/ React Native+7Nuxt+7solidjs.com+7
+5. Next.js – A React framework for building server-rendered or statically-exported React applications.
+    * Website: https://nextjs.org/ Vue.js
+6. Nuxt.js – A framework based on Vue.js for building server-side rendered applications.
+    * Website: https://nuxt.com/
+7. SolidJS – A declarative JavaScript library for building user interfaces with fine-grained reactivity.
+    * Website: https://www.solidjs.com/ Reddit+23solidjs.com+23solidjs.com+23
 
-# 1) IMPORTS
-import os
-import getpass
-import bs4
-from typing_extensions import TypedDict, List
+🎨 UI Component Libraries with Accessibility Support
+1. MUI (Material UI) – A React component library implementing Google's Material Design system.
+    * Website: https://mui.com/ GitHub+2MUI+2
+2. Ant Design – A design system for enterprise-level products, built with React.
+    * Website: https://ant.design/
+3. Chakra UI – A simple, modular, and accessible component library for React.
+    * Website: https://chakra-ui.com/
+4. Tailwind UI – A collection of professionally designed, pre-built, fully responsive HTML components, built with Tailwind CSS.
+    * Website: https://tailwindui.com/
+5. Headless UI – Completely unstyled, fully accessible UI components, designed to integrate beautifully with Tailwind CSS.
+    * Website: https://headlessui.com/
+6. PrimeReact – A rich set of open-source UI components for React.
+    * Website: https://www.primefaces.org/primereact/
+7. PrimeVue – A rich set of open-source UI components for Vue.js.
+    * Website: https://www.primefaces.org/primevue/
+8. Bootstrap – A popular open-source toolkit for developing with HTML, CSS, and JS.
+    * Website: https://getbootstrap.com/
+9. React-Bootstrap – Bootstrap rebuilt for React.
+    * Website: https://react-bootstrap.github.io/
+10. Angular Material – Material Design components for Angular.
+    * Website: https://material.angular.io/
 
-# LLM selection via LangChain's model-init helper
-from langchain.chat_models import init_chat_model  # Doc: model init helper for chat models
-# Vector store + docs
-from langchain_core.vectorstores import InMemoryVectorStore  # Doc: in-memory vector store
-from langchain_openai import OpenAIEmbeddings               # Doc: embeddings
-from langchain_community.document_loaders import WebBaseLoader  # Doc: load webpage
-from langchain_text_splitters import RecursiveCharacterTextSplitter  # Doc: chunking
-from langchain_core.documents import Document  # Doc: structured document type
+🔍 Accessibility Tools & Testing Libraries
+1. axe-core – An accessibility engine for automated Web UI testing.
+    * Website: https://www.deque.com/axe/
+2. Lighthouse – An open-source, automated tool for improving the quality of web pages.
+    * Website: https://developer.chrome.com/docs/lighthouse/
+3. Pa11y – A free and open-source automated accessibility testing tool.
+    * Website: https://pa11y.org/
+4. Accessibility Insights – A suite of open-source tools to help developers find and fix accessibility issues in their web apps.
+    * Website: https://accessibilityinsights.io/
+5. WAVE Evaluation Tool – A suite of evaluation tools that help authors make their web content more accessible to individuals with disabilities.
+    * Website: https://wave.webaim.org/
 
-# Prompt + graph
-from langchain import hub  # Doc: pull pre-built prompts
-from langgraph.graph import START, StateGraph                 # Doc: LangGraph state graphs
+⚙️ State Management Libraries
+1. Redux – A predictable state container for JavaScript apps.
+    * Website: https://redux.js.org/
+2. MobX – Simple, scalable state management.
+    * Website: https://mobx.js.org/
+3. Zustand – A small, fast, and scalable bearbones state-management solution.
+    * Website: https://github.com/pmndrs/zustand
+4. Recoil – A state management library for React.
+    * Website: https://recoiljs.org/
 
-# 2) KEYS (set your own; keep secrets safe!)
-# Gemini (LLM). Swap for OpenAI/Azure OpenAI if you prefer.
-if not os.environ.get("GOOGLE_API_KEY"):
-    os.environ["GOOGLE_API_KEY"] = getpass.getpass("Enter GOOGLE_API_KEY: ")
-
-# OpenAI (embeddings)
-if not os.environ.get("OPENAI_API_KEY"):
-    os.environ["OPENAI_API_KEY"] = getpass.getpass("Enter OPENAI_API_KEY: ")
-
-# 3) CHOOSE MODELS (LLM + embeddings)
-llm = init_chat_model("gemini-2.5-flash", model_provider="google_genai")  # conversational LLM
-embeddings = OpenAIEmbeddings(model="text-embedding-3-large")             # high-quality embeddings
-
-# 4) LOAD & CHUNK CONTENT (we’ll index Lilian Weng’s agents blog from the LangChain tutorials)
-loader = WebBaseLoader(
-    web_paths=("https://lilianweng.github.io/posts/2023-06-23-agent/",),
-    bs_kwargs=dict(parse_only=bs4.SoupStrainer(class_=("post-content", "post-title", "post-header"))),
-)
-docs = loader.load()
-
-text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=200)
-splits = text_splitter.split_documents(docs)
-
-# 5) BUILD VECTOR STORE
-vector_store = InMemoryVectorStore(embeddings)
-_ = vector_store.add_documents(splits)
-
-# 6) PROMPT (pre-built “RAG prompt” from LangChain Hub)
-prompt = hub.pull("rlm/rag-prompt")
-
-# 7) STATE SHAPE FOR OUR GRAPH
-class State(TypedDict):
-    question: str
-    context: List[Document]
-    answer: str
-
-# 8) RETRIEVAL NODE
-def retrieve(state: State):
-    retrieved = vector_store.similarity_search(state["question"])
-    return {"context": retrieved}
-
-# 9) GENERATION NODE
-def generate(state: State):
-    docs_text = "\n\n".join(d.page_content for d in state["context"])
-    # Prompt expects {question, context}
-    messages = prompt.invoke({"question": state["question"], "context": docs_text})
-    response = llm.invoke(messages)
-    return {"answer": response.content}
-
-# 10) COMPOSE GRAPH
-graph_builder = StateGraph(State).add_sequence([retrieve, generate])
-graph_builder.add_edge(START, "retrieve")
-graph = graph_builder.compile()
-
-# 11) RUN A QUERY
-result = graph.invoke({"question": "What is Task Decomposition?"})
-
-# 12) PRETTY PRINT
-print("ANSWER:\n", result["answer"])
-print("\nSOURCES:")
-for i, d in enumerate(result["context"], 1):
-    print(f"{i}. {d.metadata.get('source', 'n/a')}")
+📜 Web Standards & Guidelines
+1. HTML5 Specification – The latest version of the HTML standard.
+    * Website: https://html.spec.whatwg.org/multipage/
+2. CSS3 Specification – The latest version of the CSS standard.
+    * Website: https://www.w3.org/TR/css-2018/
+3. DOM Level 4 Specification – The latest version of the DOM standard.
+    * Website: https://dom.spec.whatwg.org/
+4. ARIA 1.2 Specification – Accessible Rich Internet Applications (WAI-ARIA) 1.2.
+    * Website: https://www.w3.org/TR/wai-aria-1.2/
+5. WCAG 2.2 Guidelines – Web Content Accessibility Guidelines (WCAG) 2.2.
+    * Website: https://www.w3.org/WAI/WCAG22/
+6. Section 508 Standards – U.S. federal accessibility standards.
+    * Website: https://www.section508.gov/
+7. EN 301 549 – European accessibility requirements for public procurement of ICT products and services.
+    * Website: https://www.w3.org/WAI/WCAG21/quickref/
